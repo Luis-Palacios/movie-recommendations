@@ -195,7 +195,7 @@ class SVDRecommender(SVD):
         trainset = self.trainset
         fill = trainset.global_mean
         anti_testset = []
-        u = trainset.to_inner_uid(str(device_id))
+        u = trainset.to_inner_uid(device_id)
         user_items = set([j for (j, _) in trainset.ur[u]])
         anti_testset += [(trainset.to_raw_uid(u), trainset.to_raw_iid(i), fill) for
                          i in trainset.all_items() if
