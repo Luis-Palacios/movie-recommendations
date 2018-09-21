@@ -23,27 +23,27 @@ class KnnUB(KNNBasic):
 
 
     def __init__(self, k=40, min_k=1, verbose=True, **kwargs):
-        device_based_options = {'name': 'cosine',
+        user_based_options = {'name': 'cosine',
                                 'user_based': True
                                 }
         super().__init__(k=k, min_k=min_k,
-                         sim_options=device_based_options, verbose=verbose, **kwargs)
+                         sim_options=user_based_options, verbose=verbose, **kwargs)
 
-    def get_top_n_recommendations(self, device_id, n: int = 10) -> list:
-        """Get the top n Recomendation skills for a given device id
+    def get_top_n_recommendations(self, user_id, n: int = 10) -> list:
+        """Get the top n Recomendation movies for a given user id
 
         Arguments:
-            device_id {string} -- The id of the device
+            user_id {string} -- The id of the user
 
         Keyword Arguments:
-            n {int} -- Top n skills to recommend (default: {10})
+            n {int} -- Top n movies to recommend (default: {10})
 
         Raises:
-            ValueError -- Raise if the device is not on the data
+            ValueError -- Raise if the user is not on the data
             or if the model has not been trained before calling this method
 
         Returns:
-            list -- A list of tuple containing the skills id and rate sum
+            list -- A list of tuple containing the movies id and rate sum
         """
 
         try:
@@ -53,14 +53,13 @@ class KnnUB(KNNBasic):
             raise ValueError(
                 'Model needs to be trained first try running the fit method first')
 
-        self.compute_similarities()
-        # Get top N similar devices to our device
-        device_inner_id = self.trainset.to_inner_uid(device_id)
-        similarity_row = self.sim[device_inner_id]
+        # Get top N similar users to our user
+        user_inner_id = self.trainset.to_inner_uid(user_id)
+        similarity_row = self.sim[user_inner_id]
 
         similar_users = []
         for inner_id, score in enumerate(similarity_row):
-            if (inner_id != device_inner_id):
+            if (inner_id != user_inner_id):
                 similar_users.append((inner_id, score))
         k_neighbors = heapq.nlargest(n, similar_users, key=lambda t: t[1])
 
@@ -74,18 +73,18 @@ class KnnUB(KNNBasic):
                 candidates[rating[0]] += (rating[1] / 5.0) * \
                     user_similarity_score
 
-        # Build a dictionary of stuff the devices has already use
+        # Build a dictionary of stuff the user has already use
         watched = {}
-        for item_id, rating in self.trainset.ur[device_inner_id]:
+        for item_id, rating in self.trainset.ur[user_inner_id]:
             watched[item_id] = 1
 
-        # Get top-rated skills from similar devices:
+        # Get top-rated movies from similar users:
         pos = 0
         recommendations = []
         for item_id, rating_sum in sorted(candidates.items(), key=itemgetter(1), reverse=True):
             if not item_id in watched:
-                skill_id = self.trainset.to_raw_iid(item_id)
-                recommendations.append((skill_id, rating_sum))
+                movie_id = self.trainset.to_raw_iid(item_id)
+                recommendations.append((movie_id, rating_sum))
                 pos += 1
                 if (pos > n):
                     break
@@ -110,27 +109,27 @@ class KnnIB(KNNBasic):
             similarity, etc.  Default is True.    
     """
     def __init__(self, k=40, min_k=1, verbose=True, **kwargs):
-        device_based_options = {'name': 'cosine',
+        movie_based_options = {'name': 'cosine',
                                 'user_based': False
                                 }
         super().__init__(k=k, min_k=min_k,
-                         sim_options=device_based_options, verbose=verbose, **kwargs)
+                         sim_options=movie_based_options, verbose=verbose, **kwargs)
 
-    def get_top_n_recommendations(self, device_id, n: int = 10) -> list:
-        """Get the top n Recomendation skills for a given device id
+    def get_top_n_recommendations(self, user_id, n: int = 10) -> list:
+        """Get the top n Recomendation movies for a given user id
 
         Arguments:
-            device_id {string} -- The id of the device
+            user_id {string} -- The id of the user
 
         Keyword Arguments:
-            n {int} -- Top n skills to recommend (default: {10})
+            n {int} -- Top n movies to recommend (default: {10})
 
         Raises:
-            ValueError -- Raise if the device is not on the data
+            ValueError -- Raise if the user is not on the data
             or if the model has not been trained before calling this method
 
         Returns:
-            list -- A list of tuple containing the skills id and rate sum
+            list -- A list of tuple containing the movies id and rate sum
         """
 
         try:
@@ -140,13 +139,12 @@ class KnnIB(KNNBasic):
             raise ValueError(
                 'Model needs to be trained first try running the fit method first')
 
-        self.compute_similarities()
-        device_inner_id = self.trainset.to_inner_uid(device_id)
+        user_inner_id = self.trainset.to_inner_uid(user_id)
 
         # Get the top K items we rated
-        test_device_ratings = self.trainset.ur[device_inner_id]
+        test_user_ratings = self.trainset.ur[user_inner_id]
         k_neighbors = heapq.nlargest(
-            n, test_device_ratings, key=lambda t: t[1])
+            n, test_user_ratings, key=lambda t: t[1])
 
         # Get similar items to stuff we liked (weighted by rating)
         candidates = defaultdict(float)
@@ -157,15 +155,15 @@ class KnnIB(KNNBasic):
 
         # Build a dictionary of stuff the user has already seen
         watched = {}
-        for item_id, rating in self.trainset.ur[device_inner_id]:
+        for item_id, rating in self.trainset.ur[user_inner_id]:
             watched[item_id] = 1
 
         recommendations = []
         pos = 0
         for item_id, rating_sum in sorted(candidates.items(), key=itemgetter(1), reverse=True):
             if not item_id in watched:
-                skill_id = self.trainset.to_raw_iid(item_id)
-                recommendations.append((skill_id, rating_sum))
+                movie_id = self.trainset.to_raw_iid(item_id)
+                recommendations.append((movie_id, rating_sum))
                 pos += 1
                 if (pos > n):
                     break
@@ -184,7 +182,7 @@ class SVDRecommender(SVD):
     def __init__(self):
         super().__init__()
 
-    def get_top_n_recommendations(self, device_id, n: int = 10) -> list:
+    def get_top_n_recommendations(self, user_id, n: int = 10) -> list:
 
         try:
             self.trainset
@@ -195,7 +193,7 @@ class SVDRecommender(SVD):
         trainset = self.trainset
         fill = trainset.global_mean
         anti_testset = []
-        u = trainset.to_inner_uid(device_id)
+        u = trainset.to_inner_uid(user_id)
         user_items = set([j for (j, _) in trainset.ur[u]])
         anti_testset += [(trainset.to_raw_uid(u), trainset.to_raw_iid(i), fill) for
                          i in trainset.all_items() if

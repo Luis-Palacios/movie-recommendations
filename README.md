@@ -18,3 +18,7 @@ It's uses [Surprise](http://surpriselib.com/) "a Python [scikit](https://www.sci
     `activate movie-ratings`
     ### Linux or OSX
     `source activate movie-ratings`
+4. Run Jupyter notebook `jupyter notebook`
+
+
+See [Movie-Recommendations notebook](Movie-Recommendations.ipynb) for more details
